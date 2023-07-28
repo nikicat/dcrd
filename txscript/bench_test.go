@@ -177,7 +177,7 @@ func BenchmarkGetPreciseSigOpCount(b *testing.B) {
 	// as the final data push so the benchmark will cover the p2sh path.
 	scriptHash := "0x0000000000000000000000000000000000000001"
 	pkScript := mustParseShortFormV0("HASH160 DATA_20 " + scriptHash + " EQUAL")
-	sigScript, err := NewScriptBuilder().AddData(redeemScript).Script()
+	sigScript, err := NewScriptBuilder().AddOps(redeemScript).Script()
 	if err != nil {
 		b.Fatalf("failed to create signature script: %v", err)
 	}

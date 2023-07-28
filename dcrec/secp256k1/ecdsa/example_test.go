@@ -29,7 +29,7 @@ func ExampleSign() {
 	// Sign a message using the private key.
 	message := "test message"
 	messageHash := blake256.Sum256([]byte(message))
-	signature := ecdsa.Sign(privKey, messageHash[:])
+	signature := ecdsa.Sign(privKey, messageHash[:], nil)
 
 	// Serialize and display the signature.
 	fmt.Printf("Serialized Signature: %x\n", signature.Serialize())

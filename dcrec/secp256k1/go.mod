@@ -1,4 +1,4 @@
-module github.com/decred/dcrd/dcrec/secp256k1/v4
+module github.com/decred/dcrd/dcrec/secp256k1/v5
 
 go 1.17
 

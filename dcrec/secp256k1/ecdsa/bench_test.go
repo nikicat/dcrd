@@ -85,7 +85,7 @@ func BenchmarkSign(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		signRFC6979(privKey, msgHash)
+		signRFC6979(privKey, msgHash, nil)
 	}
 }
 
@@ -141,7 +141,7 @@ func BenchmarkSignCompact(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = SignCompact(privKey, msgHash, true)
+		_ = SignCompact(privKey, msgHash, true, nil)
 	}
 }
 

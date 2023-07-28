@@ -659,7 +659,7 @@ func sign(privKey, nonce *secp256k1.ModNScalar, hash []byte) (*Signature, byte, 
 // signRFC6979 generates a deterministic ECDSA signature according to RFC 6979
 // and BIP0062 and returns it along with an additional public key recovery code
 // for efficiently recovering the public key from the signature.
-func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte) (*Signature, byte) {
+func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte, extra []byte) (*Signature, byte) {
 	// The algorithm for producing an ECDSA signature is given as algorithm 4.29
 	// in [GECC].
 	//
@@ -700,7 +700,7 @@ func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte) (*Signature, byte) 
 		//
 		// Generate a deterministic nonce in [1, N-1] parameterized by the
 		// private key, message being signed, and iteration count.
-		k := secp256k1.NonceRFC6979(privKeyBytes[:], hash, nil, nil, iteration)
+		k := secp256k1.NonceRFC6979(privKeyBytes[:], hash, extra, nil, iteration)
 
 		// Steps 2-6.
 		sig, pubKeyRecoveryCode, success := sign(privKeyScalar, k, hash)
@@ -718,8 +718,8 @@ func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte) (*Signature, byte) 
 // private key.  The produced signature is deterministic (same message and same
 // key yield the same signature) and canonical in accordance with RFC6979 and
 // BIP0062.
-func Sign(key *secp256k1.PrivateKey, hash []byte) *Signature {
-	signature, _ := signRFC6979(key, hash)
+func Sign(key *secp256k1.PrivateKey, hash []byte, extra []byte) *Signature {
+	signature, _ := signRFC6979(key, hash, extra)
 	return signature
 }
 
@@ -762,10 +762,10 @@ const (
 //
 // The compact sig recovery code is the value 27 + public key recovery code + 4
 // if the compact signature was created with a compressed public key.
-func SignCompact(key *secp256k1.PrivateKey, hash []byte, isCompressedKey bool) []byte {
+func SignCompact(key *secp256k1.PrivateKey, hash []byte, isCompressedKey bool, extra []byte) []byte {
 	// Create the signature and associated pubkey recovery code and calculate
 	// the compact signature recovery code.
-	sig, pubKeyRecoveryCode := signRFC6979(key, hash)
+	sig, pubKeyRecoveryCode := signRFC6979(key, hash, extra)
 	compactSigRecoveryCode := compactSigMagicOffset + pubKeyRecoveryCode
 	if isCompressedKey {
 		compactSigRecoveryCode += compactSigCompPubKey
