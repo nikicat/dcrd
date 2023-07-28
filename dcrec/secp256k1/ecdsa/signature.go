@@ -6,6 +6,7 @@
 package ecdsa
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
@@ -659,7 +660,7 @@ func sign(privKey, nonce *secp256k1.ModNScalar, hash []byte) (*Signature, byte, 
 // signRFC6979 generates a deterministic ECDSA signature according to RFC 6979
 // and BIP0062 and returns it along with an additional public key recovery code
 // for efficiently recovering the public key from the signature.
-func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte) (*Signature, byte) {
+func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte, extra []byte) (*Signature, byte) {
 	// The algorithm for producing an ECDSA signature is given as algorithm 4.29
 	// in [GECC].
 	//
@@ -700,7 +701,7 @@ func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte) (*Signature, byte) 
 		//
 		// Generate a deterministic nonce in [1, N-1] parameterized by the
 		// private key, message being signed, and iteration count.
-		k := secp256k1.NonceRFC6979(privKeyBytes[:], hash, nil, nil, iteration)
+		k := secp256k1.NonceRFC6979(privKeyBytes[:], hash, extra, nil, iteration)
 
 		// Steps 2-6.
 		sig, pubKeyRecoveryCode, success := sign(privKeyScalar, k, hash)
@@ -719,8 +720,24 @@ func signRFC6979(privKey *secp256k1.PrivateKey, hash []byte) (*Signature, byte) 
 // key yield the same signature) and canonical in accordance with RFC6979 and
 // BIP0062.
 func Sign(key *secp256k1.PrivateKey, hash []byte) *Signature {
-	signature, _ := signRFC6979(key, hash)
+	signature, _ := signRFC6979LowR(key, hash)
 	return signature
+}
+
+// Returns fixed-size signatures (70 bytes)
+func signRFC6979LowR(key *secp256k1.PrivateKey, hash []byte) (signature *Signature, pubKeyRecoveryCode byte) {
+	// See https://github.com/bitcoin/bitcoin/pull/13666
+	extra := make([]byte, 32)
+	for i := uint32(0); true; i++ {
+		binary.LittleEndian.PutUint32(extra, i)
+		signature, pubKeyRecoveryCode = signRFC6979(key, hash, extra)
+		highRByte := signature.r.Bytes()[0]
+		highSByte := signature.s.Bytes()[0]
+		if highRByte&0x80 == 0x00 && highRByte != 0x00 && highSByte != 0x00 {
+			break
+		}
+	}
+	return
 }
 
 const (
@@ -765,7 +782,7 @@ const (
 func SignCompact(key *secp256k1.PrivateKey, hash []byte, isCompressedKey bool) []byte {
 	// Create the signature and associated pubkey recovery code and calculate
 	// the compact signature recovery code.
-	sig, pubKeyRecoveryCode := signRFC6979(key, hash)
+	sig, pubKeyRecoveryCode := signRFC6979LowR(key, hash)
 	compactSigRecoveryCode := compactSigMagicOffset + pubKeyRecoveryCode
 	if isCompressedKey {
 		compactSigRecoveryCode += compactSigCompPubKey
